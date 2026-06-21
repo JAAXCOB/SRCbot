@@ -61,7 +61,10 @@ RUN_INFO = """🏃 Информация о пробежке:
 С нами бегает фотограф — снимки пришлём после.
 После финиша можно выпить кофе в AMO 🫶
 
-До встречи на старте! 💪"""
+До встречи на старте! 💪
+
+А пока можешь посмотреть фото с прошлых пробежек!
+https://disk.360.yandex.ru/d/qyGbYXCGzV7u1A"""
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
