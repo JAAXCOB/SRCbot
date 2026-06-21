@@ -41,7 +41,7 @@ def format_wednesdays() -> list[str]:
         9: "сентября", 10: "октября", 11: "ноября", 12: "декабря",
     }
     result = []
-    for i in range(4):
+    for i in range(3):
         d = today + timedelta(days=days_until_wed + i * 7)
         label = f"{d.day} {months_ru[d.month]}"
         if i == 0:
