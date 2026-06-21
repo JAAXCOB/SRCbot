@@ -89,10 +89,13 @@ async def received_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     chosen_date = update.message.text.strip()
     user = update.effective_user
 
-    await update.message.reply_text(
-        f"Отлично, {name}! ✅\n\nВы зарегистрированы на пробежку {chosen_date}.\n\n{RUN_INFO}",
-        reply_markup=ReplyKeyboardRemove(),
-    )
+    photo_path = os.path.join(os.path.dirname(__file__), "photo.jpg")
+    with open(photo_path, "rb") as photo:
+        await update.message.reply_photo(
+            photo=photo,
+            caption=f"Отлично, {name}! ✅\n\nВы зарегистрированы на пробежку {chosen_date}.\n\n{RUN_INFO}",
+            reply_markup=ReplyKeyboardRemove(),
+        )
 
     await context.bot.send_message(
         chat_id=OWNER_ID,
