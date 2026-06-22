@@ -128,7 +128,8 @@ def main() -> None:
             ASK_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, received_name)],
             ASK_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, received_date)],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[CommandHandler("cancel", cancel), CommandHandler("start", start)],
+        allow_reentry=True,
     )
 
     app.add_handler(conv)
