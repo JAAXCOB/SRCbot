@@ -55,7 +55,7 @@ RUN_INFO = """🏃 Информация о пробежке:
 
 📍 Место сбора: кофейня AMO, Мичуринский проспект, 56
 🕖 Сбор: 19:00 | Старт: 19:30
-🗺 Маршрут: Парк 50-летия Октября, ~5 км
+🗺 Маршрут: Парк Событий, ~5 км
 💸 Участие: бесплатно
 
 Темп — комфортный, без требований к подготовке.
@@ -69,6 +69,12 @@ https://disk.360.yandex.ru/d/qyGbYXCGzV7u1A"""
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    args = context.args
+    if args and args[0] == "saturday":
+        context.user_data["fixed_date"] = "2 августа (суббота)"
+    else:
+        context.user_data.pop("fixed_date", None)
+
     await update.message.reply_text(
         "Привет! 👋\n\nДобро пожаловать в Sky Runners Club.\n\nКак Вас зовут?",
         reply_markup=ReplyKeyboardRemove(),
@@ -79,6 +85,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def received_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["name"] = update.message.text.strip()
 
+    if context.user_data.get("fixed_date"):
+        return await confirm_registration(update, context, context.user_data["fixed_date"])
+
     dates = format_wednesdays()
     keyboard = [[d] for d in dates]
     await update.message.reply_text(
@@ -88,9 +97,8 @@ async def received_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     return ASK_DATE
 
 
-async def received_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def confirm_registration(update: Update, context: ContextTypes.DEFAULT_TYPE, chosen_date: str) -> int:
     name = context.user_data.get("name", "")
-    chosen_date = update.message.text.strip()
     user = update.effective_user
 
     photo_path = os.path.join(os.path.dirname(__file__), "photo.jpg")
@@ -115,8 +123,12 @@ async def received_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             f"ID: {user.id}"
         ),
     )
-
     return ConversationHandler.END
+
+
+async def received_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    chosen_date = update.message.text.strip()
+    return await confirm_registration(update, context, chosen_date)
 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:

@@ -10,7 +10,7 @@ MESSAGE = """🏃 Дополнительная пробежка!
 
 📍 Место сбора: кофейня AMO, Мичуринский проспект, 56
 🕙 Сбор: 10:00 | Старт: 10:30
-🗺 Маршрут: Парк 50-летия Октября, ~5 км
+🗺 Маршрут: Парк Событий, ~5 км
 💸 Участие: бесплатно
 
 Темп — комфортный, без требований к подготовке.
@@ -22,7 +22,7 @@ MESSAGE = """🏃 Дополнительная пробежка!
 async def send_to(user_ids: list[int]):
     bot = Bot(token=BOT_TOKEN)
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("Зарегистрироваться 👟", url="https://t.me/skyrunnersclub_bot")]
+        [InlineKeyboardButton("Зарегистрироваться 👟", url="https://t.me/skyrunnersclub_bot?start=saturday")]
     ])
     for uid in user_ids:
         try:
