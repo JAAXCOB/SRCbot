@@ -87,7 +87,7 @@ https://disk.360.yandex.ru/d/qyGbYXCGzV7u1A"""
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     args = context.args
     if args and args[0] == "saturday":
-        context.user_data["fixed_date"] = "2 августа (суббота)"
+        context.user_data["fixed_date"] = "1 августа (суббота)"
         await update.message.reply_text(
             "Привет! 👋\n\nВы регистрируетесь на дополнительную пробежку в субботу, 2 августа.\n\nКак Вас зовут?",
             reply_markup=ReplyKeyboardRemove(),
