@@ -1,3 +1,4 @@
+import asyncio
 import os
 from datetime import date, timedelta
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
@@ -123,7 +124,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 
-def main() -> None:
+async def main() -> None:
     app = Application.builder().token(BOT_TOKEN).build()
 
     conv = ConversationHandler(
@@ -137,8 +138,14 @@ def main() -> None:
     )
 
     app.add_handler(conv)
-    app.run_polling()
+
+    async with app:
+        await app.start()
+        await app.updater.start_polling()
+        await asyncio.Event().wait()
+        await app.updater.stop()
+        await app.stop()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
