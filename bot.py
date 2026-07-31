@@ -67,6 +67,22 @@ RUN_INFO = """🏃 Информация о пробежке:
 А пока можешь посмотреть фото с прошлых пробежек!
 https://disk.360.yandex.ru/d/qyGbYXCGzV7u1A"""
 
+RUN_INFO_SATURDAY = """🏃 Информация о пробежке:
+
+📍 Место сбора: кофейня AMO, Мичуринский проспект, 56
+🕙 Сбор: 10:00 | Старт: 10:30
+🗺 Маршрут: Парк Событие, ~5 км
+💸 Участие: бесплатно
+
+Темп — комфортный, без требований к подготовке.
+С нами бегает фотограф — снимки пришлём после.
+После финиша можно выпить кофе в AMO 🫶
+
+До встречи на старте! 💪
+
+А пока можешь посмотреть фото с прошлых пробежек!
+https://disk.360.yandex.ru/d/qyGbYXCGzV7u1A"""
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     args = context.args
@@ -103,12 +119,13 @@ async def received_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 async def confirm_registration(update: Update, context: ContextTypes.DEFAULT_TYPE, chosen_date: str) -> int:
     name = context.user_data.get("name", "")
     user = update.effective_user
+    info = RUN_INFO_SATURDAY if context.user_data.get("fixed_date") else RUN_INFO
 
     photo_path = os.path.join(os.path.dirname(__file__), "photo.jpg")
     with open(photo_path, "rb") as photo:
         await update.message.reply_photo(
             photo=photo,
-            caption=f"Отлично, {name}! ✅\n\nВы зарегистрированы на пробежку {chosen_date}.\n\n{RUN_INFO}",
+            caption=f"Отлично, {name}! ✅\n\nВы зарегистрированы на пробежку {chosen_date}.\n\n{info}",
             reply_markup=ReplyKeyboardRemove(),
         )
 
