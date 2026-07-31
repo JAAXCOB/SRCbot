@@ -100,6 +100,10 @@ async def received_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
             reply_markup=ReplyKeyboardRemove(),
         )
 
+    users_file = os.path.join(os.path.dirname(__file__), "users.txt")
+    with open(users_file, "a") as f:
+        f.write(f"{user.id}\n")
+
     await context.bot.send_message(
         chat_id=OWNER_ID,
         text=(
