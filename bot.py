@@ -55,7 +55,7 @@ RUN_INFO = """🏃 Информация о пробежке:
 
 📍 Место сбора: кофейня AMO, Мичуринский проспект, 56
 🕖 Сбор: 19:00 | Старт: 19:30
-🗺 Маршрут: Парк Событий, ~5 км
+🗺 Маршрут: Парк Событие, ~5 км
 💸 Участие: бесплатно
 
 Темп — комфортный, без требований к подготовке.
@@ -72,13 +72,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     args = context.args
     if args and args[0] == "saturday":
         context.user_data["fixed_date"] = "2 августа (суббота)"
+        await update.message.reply_text(
+            "Привет! 👋\n\nВы регистрируетесь на дополнительную пробежку в субботу, 2 августа.\n\nКак Вас зовут?",
+            reply_markup=ReplyKeyboardRemove(),
+        )
     else:
         context.user_data.pop("fixed_date", None)
-
-    await update.message.reply_text(
-        "Привет! 👋\n\nДобро пожаловать в Sky Runners Club.\n\nКак Вас зовут?",
-        reply_markup=ReplyKeyboardRemove(),
-    )
+        await update.message.reply_text(
+            "Привет! 👋\n\nДобро пожаловать в Sky Runners Club.\n\nКак Вас зовут?",
+            reply_markup=ReplyKeyboardRemove(),
+        )
     return ASK_NAME
 
 
