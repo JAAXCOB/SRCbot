@@ -17,36 +17,27 @@ OWNER_ID = int(os.environ["OWNER_ID"])
 ASK_NAME, ASK_DATE = range(2)
 
 
-def next_wednesdays(n=4) -> list[str]:
+def format_next_dates(n=3) -> list[str]:
     today = date.today()
-    days_until_wed = (2 - today.weekday()) % 7
-    if days_until_wed == 0:
-        days_until_wed = 7
-    result = []
-    for i in range(n):
-        d = today + timedelta(days=days_until_wed + i * 7)
-        result.append(d.strftime("%d.%m (%a)").replace("Wed", "ср").replace("Mon", "пн")
-                       .replace("Tue", "вт").replace("Thu", "чт").replace("Fri", "пт")
-                       .replace("Sat", "сб").replace("Sun", "вс"))
-    return result
-
-
-def format_wednesdays() -> list[str]:
-    today = date.today()
-    days_until_wed = (2 - today.weekday()) % 7
-    if days_until_wed == 0:
-        days_until_wed = 7
     months_ru = {
         1: "января", 2: "февраля", 3: "марта", 4: "апреля",
         5: "мая", 6: "июня", 7: "июля", 8: "августа",
         9: "сентября", 10: "октября", 11: "ноября", 12: "декабря",
     }
+    candidates = []
+    for weekday in (2, 5):  # среда=2, суббота=5
+        days_until = (weekday - today.weekday()) % 7
+        if days_until == 0:
+            days_until = 7
+        for i in range(n):
+            candidates.append(today + timedelta(days=days_until + i * 7))
+    candidates.sort()
     result = []
-    for i in range(3):
-        d = today + timedelta(days=days_until_wed + i * 7)
+    for d in candidates[:n]:
         label = f"{d.day} {months_ru[d.month]}"
-        if i == 0:
-            label += " (эта среда)"
+        if (d - today).days <= 7:
+            day_name = "среда" if d.weekday() == 2 else "суббота"
+            label += f" (эта {day_name})"
         result.append(label)
     return result
 
@@ -107,7 +98,7 @@ async def received_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     if context.user_data.get("fixed_date"):
         return await confirm_registration(update, context, context.user_data["fixed_date"])
 
-    dates = format_wednesdays()
+    dates = format_next_dates()
     keyboard = [[d] for d in dates]
     await update.message.reply_text(
         "На какую среду записываетесь?",
@@ -119,7 +110,8 @@ async def received_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 async def confirm_registration(update: Update, context: ContextTypes.DEFAULT_TYPE, chosen_date: str) -> int:
     name = context.user_data.get("name", "")
     user = update.effective_user
-    info = RUN_INFO_SATURDAY if context.user_data.get("fixed_date") else RUN_INFO
+    is_saturday = context.user_data.get("fixed_date") or "суббота" in chosen_date
+    info = RUN_INFO_SATURDAY if is_saturday else RUN_INFO
 
     photo_path = os.path.join(os.path.dirname(__file__), "photo.jpg")
     with open(photo_path, "rb") as photo:
