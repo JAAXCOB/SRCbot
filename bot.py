@@ -79,9 +79,20 @@ https://disk.360.yandex.ru/d/qyGbYXCGzV7u1A"""
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     args = context.args
     if args and args[0] == "saturday":
-        context.user_data["fixed_date"] = "1 августа (суббота)"
+        months_ru = {
+            1: "января", 2: "февраля", 3: "марта", 4: "апреля",
+            5: "мая", 6: "июня", 7: "июля", 8: "августа",
+            9: "сентября", 10: "октября", 11: "ноября", 12: "декабря",
+        }
+        today = date.today()
+        days_until_sat = (5 - today.weekday()) % 7
+        if days_until_sat == 0:
+            days_until_sat = 7
+        next_sat = today + timedelta(days=days_until_sat)
+        sat_label = f"{next_sat.day} {months_ru[next_sat.month]} (суббота)"
+        context.user_data["fixed_date"] = sat_label
         await update.message.reply_text(
-            "Привет! 👋\n\nВы регистрируетесь на дополнительную пробежку в субботу, 1 августа.\n\nКак Вас зовут?",
+            f"Привет! 👋\n\nВы регистрируетесь на пробежку в субботу, {next_sat.day} {months_ru[next_sat.month]}.\n\nКак Вас зовут?",
             reply_markup=ReplyKeyboardRemove(),
         )
     else:
