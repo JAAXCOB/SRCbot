@@ -81,7 +81,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if args and args[0] == "saturday":
         context.user_data["fixed_date"] = "1 августа (суббота)"
         await update.message.reply_text(
-            "Привет! 👋\n\nВы регистрируетесь на дополнительную пробежку в субботу, 2 августа.\n\nКак Вас зовут?",
+            "Привет! 👋\n\nВы регистрируетесь на дополнительную пробежку в субботу, 1 августа.\n\nКак Вас зовут?",
             reply_markup=ReplyKeyboardRemove(),
         )
     else:
