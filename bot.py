@@ -13,6 +13,7 @@ from telegram.ext import (
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 OWNER_ID = int(os.environ["OWNER_ID"])
+BASE_DIR = "/opt/srcbot"
 
 ASK_NAME, ASK_DATE = range(2)
 
@@ -113,7 +114,7 @@ async def confirm_registration(update: Update, context: ContextTypes.DEFAULT_TYP
     is_saturday = context.user_data.get("fixed_date") or "суббота" in chosen_date
     info = RUN_INFO_SATURDAY if is_saturday else RUN_INFO
 
-    photo_path = os.path.join(os.path.dirname(__file__), "photo.jpg")
+    photo_path = os.path.join(BASE_DIR, "photo.jpg")
     with open(photo_path, "rb") as photo:
         await update.message.reply_photo(
             photo=photo,
@@ -121,7 +122,7 @@ async def confirm_registration(update: Update, context: ContextTypes.DEFAULT_TYP
             reply_markup=ReplyKeyboardRemove(),
         )
 
-    users_file = os.path.join(os.path.dirname(__file__), "users.txt")
+    users_file = os.path.join(BASE_DIR, "users.txt")
     with open(users_file, "a") as f:
         f.write(f"{user.id}\n")
 
