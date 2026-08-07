@@ -92,13 +92,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         sat_label = f"{next_sat.day} {months_ru[next_sat.month]} (суббота)"
         context.user_data["fixed_date"] = sat_label
         await update.message.reply_text(
-            f"Привет! 👋\n\nВы регистрируетесь на пробежку в субботу, {next_sat.day} {months_ru[next_sat.month]}.\n\nКак Вас зовут?",
+            f"Привет! 👋\n\nТы регистрируешься на пробежку в субботу, {next_sat.day} {months_ru[next_sat.month]}.\n\nКак тебя зовут?",
             reply_markup=ReplyKeyboardRemove(),
         )
     else:
         context.user_data.pop("fixed_date", None)
         await update.message.reply_text(
-            "Привет! 👋\n\nДобро пожаловать в Sky Runners Club.\n\nКак Вас зовут?",
+            "Привет! 👋\n\nДобро пожаловать в Sky Runners Club.\n\nКак тебя зовут?",
             reply_markup=ReplyKeyboardRemove(),
         )
     return ASK_NAME
@@ -113,7 +113,7 @@ async def received_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     dates = format_next_dates()
     keyboard = [[d] for d in dates]
     await update.message.reply_text(
-        "Выбери дату пробежки:",
+        "На какую дату записываешься?",
         reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True),
     )
     return ASK_DATE
@@ -129,7 +129,7 @@ async def confirm_registration(update: Update, context: ContextTypes.DEFAULT_TYP
     with open(photo_path, "rb") as photo:
         await update.message.reply_photo(
             photo=photo,
-            caption=f"Отлично, {name}! ✅\n\nВы зарегистрированы на пробежку {chosen_date}.\n\n{info}",
+            caption=f"Отлично, {name}! ✅\n\nТы зарегистрирован на пробежку {chosen_date}.\n\n{info}",
             reply_markup=ReplyKeyboardRemove(),
         )
 
