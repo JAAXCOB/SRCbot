@@ -113,7 +113,7 @@ async def received_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     dates = format_next_dates()
     keyboard = [[d] for d in dates]
     await update.message.reply_text(
-        "На какую среду записываетесь?",
+        "Выбери дату пробежки:",
         reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True),
     )
     return ASK_DATE
