@@ -85,8 +85,29 @@ RUN_INFO_SATURDAY = """📍 Место сбора: кофейня AMO, Мичу�
 https://disk.360.yandex.ru/d/qyGbYXCGzV7u1A"""
 
 
+def get_saved_name(user_id: int) -> str | None:
+    names_file = os.path.join(BASE_DIR, "names.txt")
+    if not os.path.exists(names_file):
+        return None
+    for line in open(names_file).readlines():
+        parts = line.strip().split("|", 1)
+        if len(parts) == 2 and parts[0] == str(user_id):
+            return parts[1]
+    return None
+
+
+def save_name(user_id: int, name: str):
+    names_file = os.path.join(BASE_DIR, "names.txt")
+    lines = open(names_file).readlines() if os.path.exists(names_file) else []
+    remaining = [l for l in lines if not l.strip().startswith(f"{user_id}|")]
+    remaining.append(f"{user_id}|{name}\n")
+    with open(names_file, "w") as f:
+        f.writelines(remaining)
+
+
 def save_registration(user_id: int, name: str, distance: str, chosen_date: str):
     remove_registration(user_id)
+    save_name(user_id, name)
     with open(os.path.join(BASE_DIR, "registrations.txt"), "a") as f:
         f.write(f"{user_id}|{name}|{distance}|{chosen_date}\n")
     with open(os.path.join(BASE_DIR, "users.txt"), "a") as f:
@@ -115,6 +136,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     args = context.args
     context.user_data.clear()
 
+    saved_name = get_saved_name(update.effective_user.id)
+
     if args and args[0] == "saturday":
         today = date.today()
         days_until_sat = (5 - today.weekday()) % 7
@@ -122,6 +145,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             days_until_sat = 7
         next_sat = today + timedelta(days=days_until_sat)
         context.user_data["fixed_date"] = f"{next_sat.day} {MONTHS_RU[next_sat.month]} (суббота)"
+        if saved_name:
+            context.user_data["name"] = saved_name
+            await update.message.reply_text(
+                f"Привет, {saved_name}! 👋\n\nРады снова видеть тебя! Записываем тебя на субботу, {next_sat.day} {MONTHS_RU[next_sat.month]}.\n\nКакую дистанцию планируешь?",
+                reply_markup=DISTANCE_KEYBOARD,
+            )
+            return ASK_DISTANCE
         await update.message.reply_text(
             f"Привет! 👋\n\nТы регистрируешься на пробежку в субботу, {next_sat.day} {MONTHS_RU[next_sat.month]}.\n\nКак тебя зовут?",
             reply_markup=ReplyKeyboardRemove(),
@@ -130,6 +160,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     if args and args[0] == "long":
         context.user_data["preferred_long"] = True
+        if saved_name:
+            context.user_data["name"] = saved_name
+            await update.message.reply_text(
+                f"Привет, {saved_name}! 👋\n\nОтлично, что хочешь бежать дальше! Выбери дистанцию:",
+                reply_markup=DISTANCE_KEYBOARD,
+            )
+            return ASK_DISTANCE
         await update.message.reply_text(
             "Привет! 👋\n\nОтлично, что хочешь бежать дальше! Давай запишем тебя.\n\nКак тебя зовут?",
             reply_markup=ReplyKeyboardRemove(),
@@ -152,6 +189,14 @@ async def community_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def register_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
+    saved_name = get_saved_name(update.effective_user.id)
+    if saved_name:
+        context.user_data["name"] = saved_name
+        await update.message.reply_text(
+            f"С возвращением, {saved_name}! 👋\n\nКакую дистанцию планируешь?",
+            reply_markup=DISTANCE_KEYBOARD,
+        )
+        return ASK_DISTANCE
     await update.message.reply_text(
         "Как тебя зовут?",
         reply_markup=ReplyKeyboardRemove(),
