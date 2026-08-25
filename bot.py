@@ -16,7 +16,7 @@ OWNER_ID = int(os.environ["OWNER_ID"])
 BASE_DIR = "/opt/srcbot"
 COMMUNITY_LINK = "https://t.me/+OaXspSht2cM2MzU6"
 
-ASK_NAME, ASK_DATE = range(2)
+ASK_NAME, ASK_DISTANCE, ASK_DATE = range(3)
 
 MAIN_MENU = ReplyKeyboardMarkup(
     [["🏃 Записаться на пробежку", "💬 Наш чат"]],
@@ -28,6 +28,12 @@ MONTHS_RU = {
     5: "мая", 6: "июня", 7: "июля", 8: "августа",
     9: "сентября", 10: "октября", 11: "ноября", 12: "декабря",
 }
+
+DISTANCE_KEYBOARD = InlineKeyboardMarkup([
+    [InlineKeyboardButton("🟢 5 км (стандарт)", callback_data="dist_5")],
+    [InlineKeyboardButton("🔵 8–10 км (подальше)", callback_data="dist_long")],
+    [InlineKeyboardButton("💬 Свой вариант / хочу обсудить", callback_data="dist_custom")],
+])
 
 
 def format_next_dates(n=3) -> list[str]:
@@ -50,9 +56,7 @@ def format_next_dates(n=3) -> list[str]:
     return result
 
 
-RUN_INFO = """🏃 Информация о пробежке:
-
-📍 Место сбора: кофейня AMO, Мичуринский проспект, 56
+RUN_INFO = """📍 Место сбора: кофейня AMO, Мичуринский проспект, 56
 🕖 Сбор: 19:00 | Старт: 19:30
 🗺 Маршрут: Парк Событие, ~5 км
 💸 Участие: бесплатно
@@ -66,9 +70,7 @@ RUN_INFO = """🏃 Информация о пробежке:
 А пока можешь посмотреть фото с прошлых пробежек!
 https://disk.360.yandex.ru/d/qyGbYXCGzV7u1A"""
 
-RUN_INFO_SATURDAY = """🏃 Информация о пробежке:
-
-📍 Место сбора: кофейня AMO, Мичуринский проспект, 56
+RUN_INFO_SATURDAY = """📍 Место сбора: кофейня AMO, Мичуринский проспект, 56
 🕙 Сбор: 10:00 | Старт: 10:30
 🗺 Маршрут: Парк Событие, ~5 км
 💸 Участие: бесплатно
@@ -83,10 +85,10 @@ RUN_INFO_SATURDAY = """🏃 Информация о пробежке:
 https://disk.360.yandex.ru/d/qyGbYXCGzV7u1A"""
 
 
-def save_registration(user_id: int, name: str, chosen_date: str):
+def save_registration(user_id: int, name: str, distance: str, chosen_date: str):
     remove_registration(user_id)
     with open(os.path.join(BASE_DIR, "registrations.txt"), "a") as f:
-        f.write(f"{user_id}|{name}|{chosen_date}\n")
+        f.write(f"{user_id}|{name}|{distance}|{chosen_date}\n")
     with open(os.path.join(BASE_DIR, "users.txt"), "a") as f:
         f.write(f"{user_id}\n")
 
@@ -111,21 +113,29 @@ def remove_registration(user_id: int) -> list | None:
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     args = context.args
+    context.user_data.clear()
+
     if args and args[0] == "saturday":
         today = date.today()
         days_until_sat = (5 - today.weekday()) % 7
         if days_until_sat == 0:
             days_until_sat = 7
         next_sat = today + timedelta(days=days_until_sat)
-        sat_label = f"{next_sat.day} {MONTHS_RU[next_sat.month]} (суббота)"
-        context.user_data["fixed_date"] = sat_label
+        context.user_data["fixed_date"] = f"{next_sat.day} {MONTHS_RU[next_sat.month]} (суббота)"
         await update.message.reply_text(
             f"Привет! 👋\n\nТы регистрируешься на пробежку в субботу, {next_sat.day} {MONTHS_RU[next_sat.month]}.\n\nКак тебя зовут?",
             reply_markup=ReplyKeyboardRemove(),
         )
         return ASK_NAME
 
-    context.user_data.pop("fixed_date", None)
+    if args and args[0] == "long":
+        context.user_data["preferred_long"] = True
+        await update.message.reply_text(
+            "Привет! 👋\n\nОтлично, что хочешь бежать дальше! Давай запишем тебя.\n\nКак тебя зовут?",
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        return ASK_NAME
+
     await update.message.reply_text(
         "Привет! 👋\n\nДобро пожаловать в Sky Runners Club.\nВыбери что хочешь сделать:",
         reply_markup=MAIN_MENU,
@@ -141,7 +151,7 @@ async def community_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def register_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    context.user_data.pop("fixed_date", None)
+    context.user_data.clear()
     await update.message.reply_text(
         "Как тебя зовут?",
         reply_markup=ReplyKeyboardRemove(),
@@ -152,52 +162,86 @@ async def register_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def received_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["name"] = update.message.text.strip()
 
+    if context.user_data.get("preferred_long"):
+        msg = "Отлично! Выбери дистанцию — мы видим, что тебя интересует что-то подлиннее 😉"
+    else:
+        msg = "Какую дистанцию планируешь?"
+
+    await update.message.reply_text(msg, reply_markup=DISTANCE_KEYBOARD)
+    return ASK_DISTANCE
+
+
+async def received_distance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    await query.answer()
+
+    dist_map = {
+        "dist_5": "5 км",
+        "dist_long": "8–10 км",
+        "dist_custom": "Свой вариант",
+    }
+    distance = dist_map.get(query.data, "5 км")
+    context.user_data["distance"] = distance
+
+    await query.edit_message_reply_markup(reply_markup=None)
+    await query.edit_message_text(f"Дистанция: {distance} ✅")
+
     if context.user_data.get("fixed_date"):
         return await confirm_registration(update, context, context.user_data["fixed_date"])
 
     dates = format_next_dates()
     keyboard = [[d] for d in dates]
-    await update.message.reply_text(
-        "На какую дату записываешься?",
+    await context.bot.send_message(
+        chat_id=query.from_user.id,
+        text="На какую дату записываешься?",
         reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True),
     )
     return ASK_DATE
 
 
 async def confirm_registration(update: Update, context: ContextTypes.DEFAULT_TYPE, chosen_date: str) -> int:
+    user = update.effective_user or update.callback_query.from_user
     name = context.user_data.get("name", "")
-    user = update.effective_user
+    distance = context.user_data.get("distance", "5 км")
     is_saturday = context.user_data.get("fixed_date") or "суббота" in chosen_date
     info = RUN_INFO_SATURDAY if is_saturday else RUN_INFO
 
-    save_registration(user.id, name, chosen_date)
+    save_registration(user.id, name, distance, chosen_date)
 
     cancel_btn = InlineKeyboardMarkup([
         [InlineKeyboardButton("❌ Отменить регистрацию", callback_data="cancel_reg")]
     ])
+
+    caption = f"Отлично, {name}! ✅\n\nТы зарегистрирован на пробежку {chosen_date}.\n🏃 Дистанция: {distance}\n\n{info}"
+
     photo_path = os.path.join(BASE_DIR, "photo.jpg")
-    with open(photo_path, "rb") as photo:
-        await update.message.reply_photo(
-            photo=photo,
-            caption=f"Отлично, {name}! ✅\n\nТы зарегистрирован на пробежку {chosen_date}.\n\n{info}",
-            reply_markup=cancel_btn,
+
+    # find the right message object to reply to
+    if update.message:
+        with open(photo_path, "rb") as photo:
+            await update.message.reply_photo(photo=photo, caption=caption, reply_markup=cancel_btn)
+        await update.message.reply_text("Если планы изменятся — нажми кнопку выше 👆", reply_markup=MAIN_MENU)
+    else:
+        with open(photo_path, "rb") as photo:
+            await context.bot.send_photo(chat_id=user.id, photo=photo, caption=caption, reply_markup=cancel_btn)
+        await context.bot.send_message(chat_id=user.id, text="Если планы изменятся — нажми кнопку выше 👆", reply_markup=MAIN_MENU)
+
+    owner_msg = (
+        f"🆕 Новая регистрация!\n\n"
+        f"Имя: {name}\n"
+        f"Дата: {chosen_date}\n"
+        f"Дистанция: {distance}\n"
+        f"Telegram: @{user.username or '—'}\n"
+        f"ID: {user.id}"
+    )
+    await context.bot.send_message(chat_id=OWNER_ID, text=owner_msg)
+
+    if distance in ("8–10 км", "Свой вариант"):
+        await context.bot.send_message(
+            chat_id=OWNER_ID,
+            text=f"⚡ {name} хочет бежать {distance} — возможно, стоит написать лично!\n@{user.username or str(user.id)}",
         )
 
-    await update.message.reply_text(
-        "Если планы изменятся — нажми кнопку выше 👆",
-        reply_markup=MAIN_MENU,
-    )
-
-    await context.bot.send_message(
-        chat_id=OWNER_ID,
-        text=(
-            f"🆕 Новая регистрация!\n\n"
-            f"Имя: {name}\n"
-            f"Дата: {chosen_date}\n"
-            f"Telegram: @{user.username or '—'}\n"
-            f"ID: {user.id}"
-        ),
-    )
     return ConversationHandler.END
 
 
@@ -212,7 +256,7 @@ async def cancel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reg = remove_registration(user.id)
     if reg:
         name = reg[1] if len(reg) > 1 else "—"
-        reg_date = reg[2] if len(reg) > 2 else "—"
+        reg_date = reg[3] if len(reg) > 3 else (reg[2] if len(reg) > 2 else "—")
         await query.edit_message_caption(caption="Регистрация отменена ✅\n\nДо встречи в следующий раз! 👋")
         await context.bot.send_message(
             chat_id=OWNER_ID,
@@ -238,6 +282,7 @@ async def main() -> None:
         ],
         states={
             ASK_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, received_name)],
+            ASK_DISTANCE: [CallbackQueryHandler(received_distance, pattern="^dist_")],
             ASK_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, received_date)],
         },
         fallbacks=[CommandHandler("cancel", cancel_cmd), CommandHandler("start", start)],
