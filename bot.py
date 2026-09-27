@@ -16,12 +16,31 @@ OWNER_ID = int(os.environ["OWNER_ID"])
 BASE_DIR = "/opt/srcbot"
 COMMUNITY_LINK = "https://t.me/+OaXspSht2cM2MzU6"
 
-ASK_NAME, ASK_DISTANCE, ASK_DATE = range(3)
+SEASON_OPEN = False
+SEASON_REOPEN_LABEL = "марта"
+
+ASK_NAME, ASK_DISTANCE, ASK_DATE, ASK_WISH = range(4)
 
 MAIN_MENU = ReplyKeyboardMarkup(
     [["🏃 Записаться на пробежку", "💬 Наш чат"]],
     resize_keyboard=True,
 )
+
+CLOSED_MENU = ReplyKeyboardMarkup(
+    [["💭 Оставить пожелание", "💬 Наш чат"]],
+    resize_keyboard=True,
+)
+
+SEASON_CLOSED_MSG = (
+    f"🍂 Сезон пробежек Sky Runners Club завершён!\n\n"
+    f"Спасибо всем, кто бегал с нами! Возвращаемся в {SEASON_REOPEN_LABEL} — "
+    f"следи за анонсами в нашем чате.\n\n"
+    f"А пока можешь оставить пожелание для клуба или зайти в чат 👇"
+)
+
+
+def get_main_menu() -> ReplyKeyboardMarkup:
+    return MAIN_MENU if SEASON_OPEN else CLOSED_MENU
 
 MONTHS_RU = {
     1: "января", 2: "февраля", 3: "марта", 4: "апреля",
@@ -136,6 +155,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     args = context.args
     context.user_data.clear()
 
+    if not SEASON_OPEN:
+        await update.message.reply_text(SEASON_CLOSED_MSG, reply_markup=CLOSED_MENU)
+        return ConversationHandler.END
+
     saved_name = get_saved_name(update.effective_user.id)
 
     if args and args[0] == "saturday":
@@ -183,12 +206,36 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def community_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         f"Присоединяйся к нашему чату! 💬\n\n{COMMUNITY_LINK}",
-        reply_markup=MAIN_MENU,
+        reply_markup=get_main_menu(),
     )
+
+
+async def wish_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    await update.message.reply_text(
+        "Слушаем! Напиши пожелание, идею или просто привет — передадим организаторам 💭",
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    return ASK_WISH
+
+
+async def received_wish(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    user = update.effective_user
+    text = update.message.text.strip()
+    await context.bot.send_message(
+        chat_id=OWNER_ID,
+        text=f"💭 Пожелание от @{user.username or '—'} (ID: {user.id}):\n\n{text}",
+    )
+    await update.message.reply_text("Спасибо! Передали 🙌", reply_markup=get_main_menu())
+    return ConversationHandler.END
 
 
 async def register_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
+
+    if not SEASON_OPEN:
+        await update.message.reply_text(SEASON_CLOSED_MSG, reply_markup=CLOSED_MENU)
+        return ConversationHandler.END
+
     saved_name = get_saved_name(update.effective_user.id)
     if saved_name:
         context.user_data["name"] = saved_name
@@ -313,7 +360,7 @@ async def cancel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def cancel_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text("Окей, до встречи! 👋", reply_markup=MAIN_MENU)
+    await update.message.reply_text("Окей, до встречи! 👋", reply_markup=get_main_menu())
     return ConversationHandler.END
 
 
@@ -324,11 +371,13 @@ async def main() -> None:
         entry_points=[
             CommandHandler("start", start),
             MessageHandler(filters.Regex("^🏃 Записаться на пробежку$"), register_start),
+            MessageHandler(filters.Regex("^💭 Оставить пожелание$"), wish_start),
         ],
         states={
             ASK_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, received_name)],
             ASK_DISTANCE: [CallbackQueryHandler(received_distance, pattern="^dist_")],
             ASK_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, received_date)],
+            ASK_WISH: [MessageHandler(filters.TEXT & ~filters.COMMAND, received_wish)],
         },
         fallbacks=[CommandHandler("cancel", cancel_cmd), CommandHandler("start", start)],
         allow_reentry=True,
