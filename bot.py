@@ -27,15 +27,18 @@ MAIN_MENU = ReplyKeyboardMarkup(
 )
 
 CLOSED_MENU = ReplyKeyboardMarkup(
-    [["💭 Оставить пожелание", "💬 Наш чат"]],
+    [["🔔 Напомнить об открытии", "💭 Оставить пожелание"], ["💬 Наш чат"]],
     resize_keyboard=True,
 )
 
 SEASON_CLOSED_MSG = (
-    f"🍂 Сезон пробежек Sky Runners Club завершён!\n\n"
-    f"Спасибо всем, кто бегал с нами! Возвращаемся в {SEASON_REOPEN_LABEL} — "
-    f"следи за анонсами в нашем чате.\n\n"
-    f"А пока можешь оставить пожелание для клуба или зайти в чат 👇"
+    f"🍂 Сезон пробежек Sky Runners Club завершён на зиму!\n\n"
+    f"Спасибо каждому, кто в этом сезоне выходил бегать с нами — вы супер! 🙌\n\n"
+    f"Регистрация на пробежки сейчас недоступна. Открываемся снова в {SEASON_REOPEN_LABEL}.\n\n"
+    f"Что можно сделать прямо сейчас:\n"
+    f"🔔 Подписаться на напоминание, когда откроется сезон\n"
+    f"💭 Оставить пожелание или идею для клуба\n"
+    f"💬 Зайти в наш чат — там мы на связи круглый год"
 )
 
 
@@ -206,6 +209,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def community_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         f"Присоединяйся к нашему чату! 💬\n\n{COMMUNITY_LINK}",
+        reply_markup=get_main_menu(),
+    )
+
+
+async def notify_me_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    notify_file = os.path.join(BASE_DIR, "notify_list.txt")
+    existing = set()
+    if os.path.exists(notify_file):
+        existing = {line.strip() for line in open(notify_file).readlines()}
+    if str(user_id) not in existing:
+        with open(notify_file, "a") as f:
+            f.write(f"{user_id}\n")
+    await update.message.reply_text(
+        "Готово! 🔔 Напишем тебе первым делом, как только откроем сезон.",
         reply_markup=get_main_menu(),
     )
 
@@ -385,6 +403,7 @@ async def main() -> None:
 
     app.add_handler(conv)
     app.add_handler(MessageHandler(filters.Regex("^💬 Наш чат$"), community_handler))
+    app.add_handler(MessageHandler(filters.Regex("^🔔 Напомнить об открытии$"), notify_me_handler))
     app.add_handler(CallbackQueryHandler(cancel_callback, pattern="^cancel_reg$"))
 
     async with app:
